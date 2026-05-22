@@ -8,6 +8,12 @@ from skimage import io
 # Set random seed for reproducibility
 np.random.seed(42)
 
+# プロジェクトルートを基準としたパス解決
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_path(rel_path):
+    return os.path.join(BASE_DIR, rel_path)
+
 def add_geoscience_artifacts(df, columns, nan_ratio=0.05, outlier_ratio=0.02):
     """地球科学データ特有の欠損値や外れ値を注入する"""
     for col in columns:
@@ -21,7 +27,8 @@ def add_geoscience_artifacts(df, columns, nan_ratio=0.05, outlier_ratio=0.02):
     return df
 
 def generate_tabular_petrology(path="data/raw_tabular/petrology.csv"):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    full_path = get_path(path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
     n_samples = 150
     sio2 = np.linspace(45, 75, n_samples) + np.random.normal(0, 2, n_samples)
     mgo = 15 - (sio2 - 45) * 0.4 + np.random.normal(0, 1, n_samples)
@@ -36,10 +43,11 @@ def generate_tabular_petrology(path="data/raw_tabular/petrology.csv"):
         'SiO2': sio2, 'MgO': mgo, 'FeO': feo, 'Cr_ppm': cr
     })
     df = add_geoscience_artifacts(df, ['SiO2', 'MgO', 'FeO', 'Cr_ppm'])
-    df.to_csv(path, index=False)
+    df.to_csv(full_path, index=False)
 
 def generate_timeseries_isotopes(path="data/raw_timeseries/isotopes.csv"):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    full_path = get_path(path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
     dates = pd.date_range(start="2010-01-01", periods=365*10, freq='D')
     signal = -10 + 2 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25) + np.random.normal(0, 0.5, len(dates))
     signal[2000:] += 3.0 # 急変点
@@ -48,18 +56,20 @@ def generate_timeseries_isotopes(path="data/raw_timeseries/isotopes.csv"):
     # 欠損値の追加（センサー故障想定）
     mask = np.random.rand(len(df)) < 0.03
     df.loc[mask, 'd18O'] = np.nan
-    df.to_csv(path, index=False)
+    df.to_csv(full_path, index=False)
 
 def generate_geospatial_dem(path="data/raw_geospatial/dem.tif"):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    full_path = get_path(path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
     size = 100
     x, y = np.meshgrid(np.linspace(-5, 5, size), np.linspace(-5, 5, size))
     z = 1000 * np.exp(-(x**2 + y**2) / 10) + 50 * np.sin(x) # 地形にノイズ追加
-    with rasterio.open(path, 'w', driver='GTiff', height=size, width=size, count=1, dtype=z.dtype, crs='EPSG:4326', transform=from_origin(135.0, 35.0, 0.01, 0.01)) as dst:
+    with rasterio.open(full_path, 'w', driver='GTiff', height=size, width=size, count=1, dtype=z.dtype, crs='EPSG:4326', transform=from_origin(135.0, 35.0, 0.01, 0.01)) as dst:
         dst.write(z, 1)
 
 def generate_thin_section_image(path="data/raw_images/thin_section.png"):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    full_path = get_path(path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
     points = np.random.randint(0, 256, (30, 2))
     img = np.zeros((256, 256), dtype=np.uint8)
     for y in range(256):
@@ -68,10 +78,11 @@ def generate_thin_section_image(path="data/raw_images/thin_section.png"):
     # 画像ノイズの追加
     noise = np.random.randint(0, 20, img.shape, dtype=np.uint8)
     img = np.clip(img + noise, 0, 255)
-    io.imsave(path, img)
+    io.imsave(full_path, img)
 
 def generate_tephra_data(path="data/raw_tabular/tephra_comp.csv"):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    full_path = get_path(path)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
     n = 150
     c1 = np.random.multivariate_normal([60, 15, 2], [[1,0,0],[0,0.5,0],[0,0,0.2]], 50)
     c2 = np.random.multivariate_normal([70, 12, 4], [[1,0,0],[0,0.5,0],[0,0,0.2]], 50)
@@ -80,7 +91,7 @@ def generate_tephra_data(path="data/raw_tabular/tephra_comp.csv"):
     df = pd.DataFrame(data, columns=['SiO2', 'Al2O3', 'K2O'])
     df['Tephra_ID'] = [f'TP-{i:03d}' for i in range(150)]
     df = add_geoscience_artifacts(df, ['SiO2', 'Al2O3', 'K2O'], nan_ratio=0.02)
-    df.to_csv(path, index=False)
+    df.to_csv(full_path, index=False)
 
 def generate_all_data():
     generate_tabular_petrology()
@@ -89,9 +100,6 @@ def generate_all_data():
     generate_thin_section_image()
     generate_tephra_data()
     print("All realistic geoscientific dummy data generated.")
-
-if __name__ == "__main__":
-    generate_all_data()
 
 if __name__ == "__main__":
     generate_all_data()

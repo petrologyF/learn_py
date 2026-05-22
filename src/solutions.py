@@ -10,12 +10,18 @@ from scipy.integrate import odeint
 from scipy.signal import find_peaks
 from typing import Any, Dict, List, Tuple, Union
 
+# プロジェクトルートを基準としたパス解決
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_path(rel_path: str) -> str:
+    return os.path.join(BASE_DIR, rel_path)
+
 def solve_m1() -> pd.DataFrame:
     """
     Module 01: 岩石化学データ解析
     Mg#の計算とPCAによるクラスタリングを行い、結果をSQLite DBに保存します。
     """
-    df = pd.read_csv("data/raw_tabular/petrology.csv")
+    df = pd.read_csv(get_path("data/raw_tabular/petrology.csv"))
     df = df.dropna()
     # Mg# = 100 * (MgO/40.3) / (MgO/40.3 + FeO/71.8)
     df['Mg#'] = 100 * (df['MgO']/40.3) / (df['MgO']/40.3 + df['FeO']/71.8)
@@ -24,7 +30,7 @@ def solve_m1() -> pd.DataFrame:
     clusters = pca.fit_transform(df[['SiO2', 'MgO', 'FeO']])
     df['Cluster'] = (clusters[:, 0] > 0).astype(int)
     
-    conn = sqlite3.connect("data/petrology_processed.db")
+    conn = sqlite3.connect(get_path("data/petrology_processed.db"))
     df.to_sql("analysis", conn, if_exists="replace", index=False)
     conn.close()
     return df
@@ -34,7 +40,9 @@ def solve_m2() -> List[int]:
     Module 02: 時系列解析と古気候
     Peltアルゴリズムを用いて同位体比データの変化点を検出します。
     """
-    df = pd.read_csv("data/raw_timeseries/isotopes.csv")
+    df = pd.read_csv(get_path("data/raw_timeseries/isotopes.csv"))
+    # 欠損値の補間
+    df['d18O'] = df['d18O'].interpolate().bfill()
     signal = df['d18O'].values
     algo = rpt.Pelt(model="l2").fit(signal)
     result = algo.predict(pen=10)
@@ -45,7 +53,7 @@ def solve_m3() -> np.ndarray:
     Module 03: 地形解析
     DEMデータから傾斜角（ラジアン）を算出します。
     """
-    with rasterio.open("data/raw_geospatial/dem.tif") as src:
+    with rasterio.open(get_path("data/raw_geospatial/dem.tif")) as src:
         dem = src.read(1)
         # Simple gradient as slope proxy
         dy, dx = np.gradient(dem)
@@ -57,7 +65,7 @@ def solve_m4() -> List[float]:
     Module 04: 画像解析
     顕微鏡写真から結晶を抽出し、それぞれの等価円直径を算出します。
     """
-    img = io.imread("data/raw_images/thin_section.png", as_gray=True)
+    img = io.imread(get_path("data/raw_images/thin_section.png"), as_gray=True)
     thresh = filters.threshold_otsu(img)
     binary = img > thresh
     labels = measure.label(binary)
@@ -77,7 +85,7 @@ def solve_m6() -> pd.DataFrame:
     Module 06: 地球化学クラスタリング
     K-Meansを用いてテフラの化学組成を分類します。
     """
-    df = pd.read_csv("data/raw_tabular/tephra_comp.csv")
+    df = pd.read_csv(get_path("data/raw_tabular/tephra_comp.csv")).dropna()
     km = KMeans(n_clusters=3, random_state=42)
     df['Cluster'] = km.fit_predict(df[['SiO2', 'Al2O3', 'K2O']])
     return df

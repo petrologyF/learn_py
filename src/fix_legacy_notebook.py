@@ -1,6 +1,9 @@
 import nbformat as nbf
 import os
 
+# プロジェクトルートを基準としたパス解決
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def update_intro_notebook():
     nb = nbf.v4.new_notebook()
     
@@ -53,10 +56,11 @@ def update_intro_notebook():
         else:
             nb.cells.append(nbf.v4.new_code_cell(section['content']))
             
-    os.makedirs("notebooks", exist_ok=True)
-    with open("notebooks/00_introduction.ipynb", 'w', encoding='utf-8') as f:
+    output_path = os.path.join(BASE_DIR, "notebooks", "00_introduction.ipynb")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8') as f:
         nbf.write(nb, f)
-    print("Updated notebooks/00_introduction.ipynb with Progress Dashboard.")
+    print("Updated notebooks/00_introduction.ipynb with Progress Dashboard (Path Fixed).")
 
 if __name__ == "__main__":
     update_intro_notebook()

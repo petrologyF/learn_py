@@ -2,6 +2,9 @@ import nbformat as nbf
 import os
 from typing import List, Dict, Any, Tuple
 
+# プロジェクトルートを基準としたパス解決
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 def create_rich_notebook(filename: str, title: str, module_id: str, sections: List[Dict[str, Any]], prev_next: Tuple[str, str]) -> None:
     """
     Creates a Jupyter notebook with navigation, content, and verification cells.
@@ -52,7 +55,7 @@ def create_rich_notebook(filename: str, title: str, module_id: str, sections: Li
     # Navigation Footer
     nb.cells.append(nbf.v4.new_markdown_cell(nav_html))
 
-    output_path = f"notebooks/{filename}"
+    output_path = os.path.join(BASE_DIR, "notebooks", filename)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         nbf.write(nb, f)

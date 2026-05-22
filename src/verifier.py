@@ -14,10 +14,12 @@ try:
 except ImportError:
     HAS_IPYTHON = False
 
-DB_PATH = "data/learning_progress.db"
+# プロジェクトルートを基準としたパス解決
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "data", "learning_progress.db")
 
 def init_progress_db():
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS progress (
