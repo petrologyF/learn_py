@@ -1,6 +1,33 @@
+# --- Python / Jupyter ---
 __pycache__/
+*.py[cod]
+*$py.class
 .ipynb_checkpoints/
-data/*.csv
-data/*.tif
-data/*.geojson
+.virtual_documents/
 .pytest_cache/
+*.ipynb
+
+# --- Input/Output Data (地球科学データ・成果物) ---
+# ユーザーが学習中に生成するファイルや解析結果をGitHubに上げないようにします
+data/
+!data/.gitkeep
+
+# 特定の拡張子を個別に除外（念のため）
+*.csv
+*.tif
+*.png
+*.db
+*.sqlite3
+*.npy
+*.geojson
+
+# --- OS / IDE ---
+.DS_Store
+.vscode/
+.idea/
+.env
+
+# --- Project Specific ---
+# 検証ログや一時ファイル
+src/__pycache__/
+test_system.py

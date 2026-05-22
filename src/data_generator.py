@@ -3,7 +3,7 @@ import pandas as pd
 import rasterio
 from rasterio.transform import from_origin
 import os
-import matplotlib.pyplot as plt
+from skimage import io
 
 # Set random seed for reproducibility
 np.random.seed(42)
@@ -105,10 +105,11 @@ def generate_thin_section_image(path="data/raw_images/thin_section.png"):
             dist = np.sum((points - [x, y])**2, axis=1)
             img[y, x] = np.argmin(dist)
             
-    # Normalize and save
-    img = (img - img.min()) / (img.max() - img.min())
-    plt.imsave(path, img, cmap='gray')
+    # Normalize to 8-bit and save
+    img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
+    io.imsave(path, img)
     print(f"Generated: {path}")
+
 
 def generate_all_data():
     generate_tabular_petrology()
