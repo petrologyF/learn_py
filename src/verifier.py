@@ -50,6 +50,22 @@ def get_progress_summary() -> pd.DataFrame:
     conn.close()
     return df
 
+def verify_m0_1(output_obj: Any) -> List[str]:
+    # 期待される密度は約 3.125
+    if not isinstance(output_obj, (float, int, np.float64, np.int64)):
+        raise TypeError(f"Expected number, got {type(output_obj)}")
+    if not (3.12 <= output_obj <= 3.13):
+        raise ValueError(f"Density calculation is incorrect: {output_obj}")
+    return [f"- Calculated density: {output_obj:.2f} (Correct)"]
+
+def verify_m0_2(output_obj: Any) -> List[str]:
+    # 期待されるのは列名のリストやIndexオブジェクト
+    expected_cols = {'Sample_ID', 'SiO2', 'MgO', 'FeO', 'Cr_ppm'}
+    actual_cols = set(output_obj)
+    if not expected_cols.issubset(actual_cols):
+        raise ValueError(f"Missing expected columns. Found: {actual_cols}")
+    return [f"- Found columns: {', '.join(actual_cols)} (Correct)"]
+
 def verify_m1(output_obj: Any) -> List[str]:
     if not isinstance(output_obj, pd.DataFrame): 
         raise TypeError("Expected pd.DataFrame")
@@ -97,6 +113,8 @@ def verify_m10(output_obj: Any) -> List[str]:
     return [f"- {k}: {v}" for k, v in output_obj.items()]
 
 VERIFIERS: Dict[str, Callable[[Any], List[str]]] = {
+    'M0_1': verify_m0_1,
+    'M0_2': verify_m0_2,
     'M1': verify_m1,
     'M2': verify_m2,
     'M3': verify_m3,

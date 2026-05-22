@@ -1,109 +1,76 @@
-# Earth Science Python: A Practical Learning Repository
+# Earth Science Python: Beginner's Guide to Geoscience Data Analysis
 
 [![Python Testing](https://github.com/USER_NAME/REPO_NAME/actions/workflows/test.yml/badge.svg)](https://github.com/USER_NAME/REPO_NAME/actions/workflows/test.yml)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository provides a structured, hands-on curriculum for Earth and Natural Science researchers and students to master Python for data analysis, visualization, and automation.
+[Japanese README (日本語版はこちら)](./README.md)
 
-## 🌋 Project Goal
-Transform manual analysis workflows into automated, reproducible Python pipelines. This project focuses on five core pillars:
-1. **Data Processing**: Handling messy laboratory and field data.
-2. **Visualization**: Creating publication-quality plots and maps.
-3. **Numerical Computation**: Statistical modeling and signal processing.
-4. **Geospatial Analysis**: Working with DEMs, Shapefiles, and satellite imagery.
-5. **Automation**: Building robust pipelines for large-scale datasets.
+This repository is a hands-on learning environment for those in the Earth Sciences (Geology, Meteorology, Oceanography, Environmental Science, etc.) who are **"new to programming but want to handle data in research or work."**
 
 ---
 
-## 🏗️ Repository Structure
-```text
-.
-├── data/               # Auto-generated Earth Science datasets (CSV, GeoTIFF)
-├── notebooks/          # Progressive Jupyter Notebooks (Tutorials & Exercises)
-│   ├── 01_basics.ipynb        # Python & Jupyter fundamentals
-│   ├── 02_petrology.ipynb     # Rock compositions with NumPy/Pandas
-│   ├── 03_structural.ipynb    # Orientation data & Stereonets
-│   ├── 04_geospatial.ipynb    # GIS, Rasterio, & Mapping
-│   └── 05_automation.ipynb    # Curve fitting & Pipeline automation
-├── src/                # Backend scripts
-│   ├── data_generator.py      # Realistic dummy data engine
-│   ├── solutions.py           # Model answers for exercises
-│   └── notebook_generator.py  # Curriculum maintenance script
-├── tests/              # Automated grading & validation suite
-├── requirements.txt    # Project dependencies
-└── README.md           # You are here
-```
+## 🌋 What You Can Learn
+Move beyond manual analysis in Excel and learn to build "reproducible analysis" using Python:
+- Automated calculation and visualization of rock chemistry data.
+- Terrain analysis from Digital Elevation Models (DEM).
+- Automated image analysis of thin section micrographs.
+- Statistical classification of geochemical data (Intro to Machine Learning).
 
 ---
 
-## 🛠️ Tech Stack
-- **Core**: `numpy`, `pandas`, `matplotlib`, `seaborn`
-- **Science**: `scipy`, `sympy`, `statsmodels`, `scikit-learn`
-- **Geospatial**: `geopandas`, `rasterio`, `xarray`, `cartopy`
-- **Environment**: `jupyterlab`, `pytest`
+## 🚀 Getting Started (Environment Setup)
 
----
+If you are a beginner, please follow these steps:
 
-## 🚀 Getting Started
+### 1. Prepare Python Environment (Recommended)
+We strongly recommend installing **Anaconda** or **Miniconda** for the smoothest experience.
+- [Anaconda Installation Guide](https://www.anaconda.com/download)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/USER_NAME/REPO_NAME.git
-cd REPO_NAME
-```
+### 2. Download Materials
+Get the materials using one of the following methods:
+- **(Recommended)** Click the [Code] button on this page and select [Download ZIP], then extract it.
+- **(For Advanced Users)** `git clone https://github.com/USER_NAME/REPO_NAME.git`
 
-### 2. Set up the environment
-It is recommended to use a virtual environment or Conda.
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Generate datasets and notebooks
-Initialize the project by generating the training data and exercise files:
-```bash
-python src/data_generator.py
-python src/notebook_generator.py
-```
-
-### 4. Launch Jupyter
+### 3. Launch Jupyter Lab
+Open your terminal (Anaconda Prompt on Windows), navigate to the project folder, and run:
 ```bash
 jupyter lab
 ```
+Your browser will open with the file list.
+
+### 4. First Step
+Open `notebooks/00_introduction.ipynb`.
+Follow the instructions and execute cells using the **"Shift + Enter"** keys to check your environment and prepare the data.
 
 ---
 
-## 📝 Curriculum Overview
+## 📝 Curriculum (12 Modules)
+Learn step-by-step through specific Earth Science problems.
 
-### 01: Basic Syntax and Jupyter
-Introduction to Python basics specifically for scientists who are transitioning from Excel or specialized GUI software.
+### 🟢 Fundamentals: Getting Used to Programming
+1.  **Python Basics**: Variables, arithmetic, and basic geoscience calculations (e.g., density).
+2.  **Pandas Basics**: Loading CSV files, checking statistics, and filtering data.
 
-### 02: NumPy/Pandas in Petrology
-- Normalizing major element compositions (wt%).
-- Handling missing data in laboratory spreadsheets.
-- Visualizing chemical trends (Harker diagrams).
+### 🔵 Analysis: Visualization and Statistics
+3.  **Petrology Analysis**: Calculating Mg#, data cleaning, and PCA (Principal Component Analysis).
+4.  **Time Series Analysis**: Denoising paleoclimate data and detecting change points.
+5.  **Terrain Analysis**: Generating slope maps from Digital Elevation Models (DEM).
+6.  **Image Analysis**: Automated quantification of Crystal Size Distribution (CSD) from micrographs.
 
-### 03: Matplotlib/SciPy in Structural Geology
-- Analyzing strike and dip data.
-- Implementing coordinate transformations for stereographic projections.
-- Filtering outliers from field observations.
-
-### 04: Geospatial Analysis
-- Reading/writing Digital Elevation Models (DEM) with `rasterio`.
-- Coordinate Reference System (CRS) management.
-- Creating maps with `cartopy` and `geopandas`.
-
-### 05: Automation and Curve Fitting
-- Implementing linear and non-linear regression using `scipy.optimize`.
-- Building an end-to-end pipeline: "Read -> Filter -> Fit -> Plot".
+### 🔴 Applications: Advanced Analysis and Automation
+7.  **3D Volume Analysis**: Basics of 3D modeling and visualization of subsurface structures.
+8.  **Geochemical Clustering**: Classification and identification of tephra using K-Means.
+9.  **Earth Dynamics Simulation**: Numerical modeling of material cycles using differential equations.
+10. **Field Data Automation**: Automated調査 route map generation from GPS-tagged photos.
+11. **Mineral Spectroscopy**: Peak extraction techniques from spectral data (e.g., XRD).
+12. **Spatiotemporal Big Data**: Parallel processing of large-scale climate data (Dask/Xarray).
 
 ---
 
-## ✅ Validation and Testing
-Each exercise in the notebooks has a corresponding test case. You can verify your solutions by running:
-```bash
-pytest
-```
+## 🤝 Troubleshooting
+- If you encounter code errors, try re-running the setup cells in `00_introduction.ipynb`.
+- Background information for analysis methods (like PCA) is explained simply within each notebook.
 
 ## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
