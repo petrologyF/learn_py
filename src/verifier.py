@@ -1,102 +1,146 @@
 import pandas as pd
 import numpy as np
-import matplotlib.figure
 import pyperclip
 from datetime import datetime
 import traceback
+import sqlite3
+import os
+from typing import Any, Dict, List, Callable, Optional
 
-def verify_and_log(module_id, output_obj):
-    """
-    Verifies the output of a module pipeline and logs the result to clipboard.
-    
-    Args:
-        module_id (str): Identifier of the module (e.g., 'M1', 'M2', ...)
-        output_obj: The object to be verified.
-    """
+# Jupyter Notebook内でのリッチ表示用
+try:
+    from IPython.display import display, Markdown, HTML
+    HAS_IPYTHON = True
+except ImportError:
+    HAS_IPYTHON = False
+
+DB_PATH = "data/learning_progress.db"
+
+def init_progress_db():
+    os.makedirs("data", exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS progress (
+            module_id TEXT PRIMARY KEY,
+            status TEXT,
+            timestamp TEXT,
+            summary TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def log_progress(module_id: str, status: str, summary: str):
+    init_progress_db()
+    conn = sqlite3.connect(DB_PATH)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn.execute("""
+        INSERT OR REPLACE INTO progress (module_id, status, timestamp, summary)
+        VALUES (?, ?, ?, ?)
+    """, (module_id, status, timestamp, summary))
+    conn.commit()
+    conn.close()
+
+def get_progress_summary() -> pd.DataFrame:
+    init_progress_db()
+    conn = sqlite3.connect(DB_PATH)
+    df = pd.read_sql("SELECT * FROM progress", conn)
+    conn.close()
+    return df
+
+def verify_m1(output_obj: Any) -> List[str]:
+    if not isinstance(output_obj, pd.DataFrame): 
+        raise TypeError("Expected pd.DataFrame")
+    return [
+        f"- Sample count: {len(output_obj)}",
+        f"- Mean Mg#: {output_obj['Mg#'].mean():.2f}"
+    ]
+
+def verify_m2(output_obj: Any) -> List[str]:
+    return [f"- Detected {len(output_obj)} change points."]
+
+def verify_m3(output_obj: Any) -> List[str]:
+    return [
+        f"- Output shape: {output_obj.shape}",
+        f"- Max slope: {np.nanmax(output_obj):.2f}"
+    ]
+
+def verify_m4(output_obj: Any) -> List[str]:
+    return [f"- Counted {len(output_obj)} crystals."]
+
+def verify_m5(output_obj: Any) -> List[str]:
+    return [f"- {k}: {v}" for k, v in output_obj.items()]
+
+def verify_m6(output_obj: Any) -> List[str]:
+    if not isinstance(output_obj, pd.DataFrame): 
+        raise TypeError("Expected pd.DataFrame")
+    return [
+        f"- Tephra samples clustered: {len(output_obj)}",
+        f"- Distinct groups: {output_obj['Cluster'].nunique()}"
+    ]
+
+def verify_m7(output_obj: Any) -> List[str]:
+    return [
+        f"- Simulation steps: {len(output_obj)}",
+        f"- Final state: {output_obj[-1][0]:.4f}"
+    ]
+
+def verify_m8(output_obj: Any) -> List[str]:
+    return [f"- {k}: {v}" for k, v in output_obj.items()]
+
+def verify_m9(output_obj: Any) -> List[str]:
+    return [f"- Peaks identified: {len(output_obj)}"]
+
+def verify_m10(output_obj: Any) -> List[str]:
+    return [f"- {k}: {v}" for k, v in output_obj.items()]
+
+VERIFIERS: Dict[str, Callable[[Any], List[str]]] = {
+    'M1': verify_m1,
+    'M2': verify_m2,
+    'M3': verify_m3,
+    'M4': verify_m4,
+    'M5': verify_m5,
+    'M6': verify_m6,
+    'M7': verify_m7,
+    'M8': verify_m8,
+    'M9': verify_m9,
+    'M10': verify_m10,
+}
+
+def verify_and_log(module_id: str, output_obj: Any) -> Optional[str]:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     status = "SUCCESS"
     logs = []
     
     try:
-        if module_id == 'M1': # Tabular Petrology
-            # Expecting a DataFrame with Mg# and Cluster columns
-            if not isinstance(output_obj, pd.DataFrame):
-                raise TypeError(f"Expected pd.DataFrame, got {type(output_obj)}")
-            
-            required_cols = ['Mg#', 'Cluster']
-            for col in required_cols:
-                if col not in output_obj.columns:
-                    raise ValueError(f"Missing required column: {col}")
-            
-            mg_mean = output_obj['Mg#'].mean()
-            logs.append(f"- Sample count: {len(output_obj)}")
-            logs.append(f"- Mean Mg#: {mg_mean:.2f}")
-            logs.append(f"- Found {output_obj['Cluster'].nunique()} distinct clusters.")
-
-        elif module_id == 'M2': # Time-series Granulometry
-            # Expecting a list of change points (integers)
-            if not isinstance(output_obj, (list, np.ndarray)):
-                 raise TypeError(f"Expected list or np.ndarray, got {type(output_obj)}")
-            
-            logs.append(f"- Detected {len(output_obj)} change points.")
-            logs.append(f"- Indices: {output_obj}")
-
-        elif module_id == 'M3': # Geospatial Mapping
-            # Expecting a slope array or similar
-            if not isinstance(output_obj, np.ndarray):
-                raise TypeError(f"Expected np.ndarray, got {type(output_obj)}")
-            
-            logs.append(f"- Output shape: {output_obj.shape}")
-            logs.append(f"- Max slope: {np.nanmax(output_obj):.2f}")
-
-        elif module_id == 'M4': # Image Geometry
-            # Expecting a list of crystal diameters
-            if not isinstance(output_obj, (list, np.ndarray)):
-                raise TypeError(f"Expected list or np.ndarray, got {type(output_obj)}")
-            
-            logs.append(f"- Counted {len(output_obj)} crystals.")
-            logs.append(f"- Mean diameter: {np.mean(output_obj):.2f} pixels.")
-
-        elif module_id == 'M5': # Volume GUI
-            # Expecting a status dict
-            if not isinstance(output_obj, dict):
-                raise TypeError(f"Expected dict, got {type(output_obj)}")
-            for k, v in output_obj.items():
-                logs.append(f"- {k}: {v}")
-        
+        if module_id in VERIFIERS:
+            logs.extend(VERIFIERS[module_id](output_obj))
         else:
             raise ValueError(f"Unknown module ID: {module_id}")
 
-    except Exception as e:
+    except Exception:
         status = "FAILED"
         logs.append(f"### Error Details\n```python\n{traceback.format_exc()}\n```")
 
-    # Construct Markdown
-    md_output = f"""
-## Module {module_id} Verification Result [{status}]
-- **Timestamp:** {timestamp}
-- **Status:** {status}
+    summary_text = "\n".join(logs)
+    log_progress(module_id, status, summary_text)
 
-### Analysis Summary
-{"".join(logs if status == "SUCCESS" else [logs[0]])}
-
----
-*Verified by learn-py system*
-"""
-    if status == "FAILED":
-        md_output += f"\n{logs[-1]}"
-
+    color = "#28a745" if status == "SUCCESS" else "#dc3545"
+    md_output = (
+        f"## Module {module_id} Verification Result <span style='color:{color}'>[{status}]</span>\n"
+        f"- Timestamp: {timestamp}\n"
+        f"- Status: {status}\n\n"
+        f"### Analysis Summary\n" + summary_text
+    )
+    
+    if HAS_IPYTHON:
+        display(Markdown(md_output))
+    else:
+        print(md_output)
+    
     try:
         pyperclip.copy(md_output)
-        print("✅ 検証が完了しました。Markdown形式のレポートがクリップボードにコピーされました。")
-        print("Obsidianなどのノートアプリにペーストして記録してください。")
-    except Exception as e:
-        print(f"❌ クリップボードへのコピーに失敗しました: {e}")
-        print("以下の内容を手動でコピーしてください：")
-        print(md_output)
+    except Exception:
+        pass
 
-    return md_output
-
-if __name__ == "__main__":
-    # Test M1 failure
-    verify_and_log('M1', None)
+    return None

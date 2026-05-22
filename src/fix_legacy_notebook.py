@@ -1,28 +1,49 @@
 import nbformat as nbf
+import os
 
-def fix_basic_notebook():
+def update_intro_notebook():
     nb = nbf.v4.new_notebook()
     
     sections = [
         {
             "type": "markdown",
-            "content": "# #00 Python & Jupyter 入門\n\n地球科学解析を始める前に、Pythonの基本的な文法とJupyter Notebookの使い方を確認しましょう。"
+            "content": "# #00 Python & 地球科学データ解析：学習システムへようこそ\n\n本教材は、全ての操作をJupyter Notebook上で行えるように設計されています。まずはこのノートブックで環境のセットアップを行いましょう。"
         },
         {
             "type": "markdown",
-            "content": "## 1. Pythonの基本演算\nPythonでのべき乗（二乗など）は `**` 演算子を使います。`^` はビット演算（XOR）なので注意が必要です。\n\n$$y = x^2$$\n\nこれをPythonで書くと `y = x ** 2` となります。"
+            "content": "## 1. 開発環境の準備\n\n以下のセルを実行して、必要なライブラリがインストールされているか確認し、不足している場合はインストールします。"
         },
         {
             "type": "code",
-            "content": "def exercise_ch00_square(n):\n    \"\"\"数値 n の二乗を返す関数\"\"\"\n    y = n ** 2\n    return y\n\n# テスト実行\nprint(f'3の二乗は: {exercise_ch00_square(3)}')"
+            "content": "import sys\n!{sys.executable} -m pip install -r ../requirements.txt"
         },
         {
             "type": "markdown",
-            "content": "## 2. 地球科学の計算例：密度の計算\n密度 $\\rho$ は、質量 $m$ と体積 $V$ から以下の式で求められます。\n\n$$\\rho = \\frac{m}{V}$$\n\n以下のセルで、岩石の密度を計算する関数を作成してみましょう。"
+            "content": "## 2. 解析データの生成\n\n解析対象となる実戦的なダミーデータを生成します（欠損値やノイズが含まれます）。"
         },
         {
             "type": "code",
-            "content": "def calculate_density(mass, volume):\n    \"\"\"\n    質量(g)と体積(cm^3)から密度(g/cm^3)を計算する\n    \"\"\"\n    if volume == 0:\n        return 0\n    return mass / volume\n\n# 質量 100g, 体積 37cm^3 の岩石の密度\nrho = calculate_density(100, 37)\nprint(f'密度: {rho:.2f} g/cm^3')"
+            "content": "import sys\nsys.path.append('../')\nfrom src.data_generator import generate_all_data\n\ngenerate_all_data()"
+        },
+        {
+            "type": "markdown",
+            "content": "## 3. 学習用ノートブックの生成・更新\n\nナビゲーション機能と視覚化テンプレートが含まれた課題ノートブックを生成します。"
+        },
+        {
+            "type": "code",
+            "content": "from src.notebook_generator import generate_all_10_notebooks\n\ngenerate_all_10_notebooks()"
+        },
+        {
+            "type": "markdown",
+            "content": "## 4. 進捗ダッシュボード\n\n現在の学習進捗状況を確認します。全てのモジュールで `SUCCESS` を目指しましょう。"
+        },
+        {
+            "type": "code",
+            "content": "from src.verifier import get_progress_summary\nfrom IPython.display import display, HTML\n\ntry:\n    df = get_progress_summary()\n    if df.empty:\n        print(\"まだ完了した課題はありません。\")\n    else:\n        display(df[['module_id', 'status', 'timestamp']].style.set_properties(**{'text-align': 'left'}))\nexcept Exception as e:\n    print(f\"進捗の読み込みに失敗しました: {e}\")"
+        },
+        {
+            "type": "markdown",
+            "content": "## 5. 学習の進め方\n\n1. `01_tabular_petrology.ipynb` から順にノートブックを開く\n2. データの視覚化を通じて、欠損値や異常値の影響を確認する\n3. 課題を実装し、検証セルで `SUCCESS` を確認する\n4. このノートブックに戻って進捗をチェックする"
         }
     ]
     
@@ -32,9 +53,10 @@ def fix_basic_notebook():
         else:
             nb.cells.append(nbf.v4.new_code_cell(section['content']))
             
-    with open("notebooks/01_basic_syntax_and_jupyter.ipynb", 'w', encoding='utf-8') as f:
+    os.makedirs("notebooks", exist_ok=True)
+    with open("notebooks/00_introduction.ipynb", 'w', encoding='utf-8') as f:
         nbf.write(nb, f)
-    print("Fixed and updated notebooks/01_basic_syntax_and_jupyter.ipynb")
+    print("Updated notebooks/00_introduction.ipynb with Progress Dashboard.")
 
 if __name__ == "__main__":
-    fix_basic_notebook()
+    update_intro_notebook()

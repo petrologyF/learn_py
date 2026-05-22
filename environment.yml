@@ -20,6 +20,10 @@ dependencies:
   - notebook
   - jupyterlab
   - sqlite
+  - xarray
+  - dask
+  - netcdf4
+  - h5netcdf
   - pip
   - pip:
     - ruptures
@@ -27,3 +31,5 @@ dependencies:
     - opencv-python
     - mplstereonet
     - streamlit
+    - python-ternary
+    - exifread
