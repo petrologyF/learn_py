@@ -1,24 +1,29 @@
-name: earth_science_study
+name: earth-science-py
 channels:
   - conda-forge
   - defaults
 dependencies:
-  - python>=3.10
-  - numpy<2
+  - python=3.10
+  - numpy
   - pandas
-  - matplotlib
-  - seaborn
+  - scikit-learn
   - scipy
   - statsmodels
-  - scikit-learn
   - geopandas
   - rasterio
-  - xarray
-  - cartopy
   - shapely
+  - cartopy
+  - folium
+  - scikit-image
+  - pyvista
+  - pyperclip
   - notebook
   - jupyterlab
-  - pytest
+  - sqlite
   - pip
   - pip:
-      - pyperclip
+    - ruptures
+    - pykrige
+    - opencv-python
+    - mplstereonet
+    - streamlit

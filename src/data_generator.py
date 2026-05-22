@@ -1,85 +1,120 @@
 import numpy as np
 import pandas as pd
-import os
 import rasterio
 from rasterio.transform import from_origin
+import os
+import matplotlib.pyplot as plt
 
-def generate_all_data():
-    np.random.seed(42)
-    base_data_dir = "data"
+# Set random seed for reproducibility
+np.random.seed(42)
+
+def generate_tabular_petrology(path="data/raw_tabular/petrology.csv"):
+    """
+    Generates dummy petrology data: SiO2 vs MgO correlation with some NaNs.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    n_samples = 100
+    sio2 = np.linspace(45, 75, n_samples) + np.random.normal(0, 2, n_samples)
+    # MgO decreases as SiO2 increases (differentiation trend)
+    mgo = 15 - (sio2 - 45) * 0.4 + np.random.normal(0, 1, n_samples)
+    mgo = np.clip(mgo, 0.1, 15)
     
-    # 1. numpy_data/: Structural Geology (Strike, Dip)
-    # 200x3 ndarray: Strike (0-360), Dip (0-90), Dip Direction
-    numpy_dir = os.path.join(base_data_dir, "numpy_data")
-    os.makedirs(numpy_dir, exist_ok=True)
+    # Add FeO for Mg# calculation later
+    feo = 10 - (sio2 - 45) * 0.1 + np.random.normal(0, 0.5, n_samples)
+    feo = np.clip(feo, 1, 15)
+
+    df = pd.DataFrame({
+        'Sample_ID': [f'SR-{i:03d}' for i in range(n_samples)],
+        'SiO2': sio2,
+        'MgO': mgo,
+        'FeO': feo
+    })
     
-    strikes = np.random.uniform(0, 360, 200)
-    dips = np.random.uniform(0, 90, 200)
-    dip_directions = (strikes + 90) % 360
+    # Inject some NaNs
+    for col in ['SiO2', 'MgO', 'FeO']:
+        indices = np.random.choice(df.index, size=5, replace=False)
+        df.loc[indices, col] = np.nan
+        
+    df.to_csv(path, index=False)
+    print(f"Generated: {path}")
+
+def generate_timeseries_isotopes(path="data/raw_timeseries/isotopes.csv"):
+    """
+    Generates 10 years of daily isotope data with a change point.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    dates = pd.date_range(start="2010-01-01", periods=365*10, freq='D')
+    n = len(dates)
     
-    structural_data = np.stack([strikes, dips, dip_directions], axis=1)
+    # Base signal with seasonality
+    t = np.arange(n)
+    signal = -10 + 2 * np.sin(2 * np.pi * t / 365.25) + np.random.normal(0, 0.5, n)
     
-    # Introduce errors
-    structural_data[10, 1] = -5.0
-    structural_data[25, 0] = 400.0
-    structural_data[50, 2] = np.nan
+    # Change point at t=2000
+    change_idx = 2000
+    signal[change_idx:] += 3.0
     
-    np.save(os.path.join(numpy_dir, "structural_orientations.npy"), structural_data)
+    df = pd.DataFrame({
+        'Date': dates,
+        'd18O': signal
+    })
+    df.to_csv(path, index=False)
+    print(f"Generated: {path}")
+
+def generate_geospatial_dem(path="data/raw_geospatial/dem.tif"):
+    """
+    Generates a 100x100 virtual DEM using 2D Gaussian.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    size = 100
+    x = np.linspace(-5, 5, size)
+    y = np.linspace(-5, 5, size)
+    x, y = np.meshgrid(x, y)
     
-    # 2. pandas_data/: Petrology Major Elements
-    pandas_dir = os.path.join(base_data_dir, "pandas_data")
-    os.makedirs(pandas_dir, exist_ok=True)
+    # Gaussian mountain
+    z = 1000 * np.exp(-(x**2 + y**2) / 10)
+    # Add some noise/texture
+    z += np.random.normal(0, 10, (size, size))
     
-    elements = ['SiO2', 'TiO2', 'Al2O3', 'FeO', 'MgO', 'CaO', 'Na2O', 'K2O']
-    n_samples = 150
-    comp_data = np.random.dirichlet(np.ones(len(elements)), size=n_samples) * 100
-    df_petro = pd.DataFrame(comp_data, columns=elements)
+    # CRS and Transform (WGS84, near 0,0)
+    transform = from_origin(135.0, 35.0, 0.01, 0.01)
     
-    # Add 3% NaNs
-    mask = np.random.random(df_petro.shape) < 0.03
-    df_petro[mask] = np.nan
-    
-    df_petro.to_csv(os.path.join(pandas_dir, "major_elements.csv"), index=False)
-    
-    # 3. scipy_data/: Time Series Environmental Data
-    scipy_dir = os.path.join(base_data_dir, "scipy_data")
-    os.makedirs(scipy_dir, exist_ok=True)
-    
-    t = np.linspace(0, 100, 1000)
-    trend = 0.5 * t
-    seasonality = 10 * np.sin(2 * np.pi * t / 10)
-    noise = np.random.normal(0, 2, 1000)
-    signal = trend + seasonality + noise
-    
-    df_env = pd.DataFrame({'time': t, 'signal': signal})
-    df_env.to_csv(os.path.join(scipy_dir, "environmental_series.csv"), index=False)
-    
-    # 4. geospatial_data/: DEM GeoTIFF
-    geospatial_dir = os.path.join(base_data_dir, "geospatial_data")
-    os.makedirs(geospatial_dir, exist_ok=True)
-    
-    width, height = 100, 100
-    x = np.linspace(-3, 3, width)
-    y = np.linspace(-3, 3, height)
-    X, Y = np.meshgrid(x, y)
-    Z = 1000 * np.exp(-(X**2 + Y**2) / 2)
-    Z = Z.astype('float32')
-    
-    transform = from_origin(135.0, 35.0, 0.001, 0.001)
-    
-    with rasterio.open(
-        os.path.join(geospatial_dir, "dem.tif"),
-        'w',
-        driver='GTiff',
-        height=height,
-        width=width,
-        count=1,
-        dtype=Z.dtype,
+    new_dataset = rasterio.open(
+        path, 'w', driver='GTiff',
+        height=size, width=size,
+        count=1, dtype=z.dtype,
         crs='EPSG:4326',
         transform=transform,
-    ) as dst:
-        dst.write(Z, 1)
+    )
+    new_dataset.write(z, 1)
+    new_dataset.close()
+    print(f"Generated: {path}")
+
+def generate_thin_section_image(path="data/raw_images/thin_section.png"):
+    """
+    Generates a mock thin section image using Voronoi-like pattern.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    width, height = 256, 256
+    points = np.random.randint(0, 256, (20, 2))
+    
+    img = np.zeros((height, width))
+    
+    for y in range(height):
+        for x in range(width):
+            dist = np.sum((points - [x, y])**2, axis=1)
+            img[y, x] = np.argmin(dist)
+            
+    # Normalize and save
+    img = (img - img.min()) / (img.max() - img.min())
+    plt.imsave(path, img, cmap='gray')
+    print(f"Generated: {path}")
+
+def generate_all_data():
+    generate_tabular_petrology()
+    generate_timeseries_isotopes()
+    generate_geospatial_dem()
+    generate_thin_section_image()
 
 if __name__ == "__main__":
     generate_all_data()
-    print("All data generated successfully.")
