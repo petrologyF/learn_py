@@ -1,0 +1,24 @@
+name: earth_science_study
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.10
+  - numpy<2
+  - pandas
+  - matplotlib
+  - seaborn
+  - scipy
+  - statsmodels
+  - scikit-learn
+  - geopandas
+  - rasterio
+  - xarray
+  - cartopy
+  - shapely
+  - notebook
+  - jupyterlab
+  - pytest
+  - pip
+  - pip:
+      - pyperclip
