@@ -1,64 +1,100 @@
-import pyperclip
+﻿import pyperclip
 import numpy as np
 import pandas as pd
 from datetime import datetime
+import geopandas as gpd
 
-def check_and_copy(chapter, question, output):
+def verify_module(module_name, user_output):
     """
-    Analyzes the user's output, provides feedback, and copies the result to the clipboard in Markdown format.
+    ユーザーのパイプライン出力を検証し、Markdownレポートをクリップボードにコピーします。
     """
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    header = f"### [Learning Log] Chapter {chapter}, Question {question} ({timestamp})\n"
+    report = []
+    report.append(f"## 📊 {module_name.upper()} モジュール検証レポート")
+    report.append(f"- **実行日時**: {timestamp}")
     
-    analysis = ""
-    status = "[SUCCESS]"
+    # モジュールごとの期待される入出力の明示
+    io_info = {
+        "numpy": {"input": "structural_orientations.npy", "output": "tuple (mean_strike, mean_dip)"},
+        "pandas": {"input": "major_elements.csv", "output": "pd.DataFrame with Mg#"},
+        "scipy": {"input": "environmental_series.csv", "output": "dict {params, fft}"},
+        "geospatial": {"input": "dem.tif", "output": "gpd.GeoDataFrame"}
+    }
     
-    # Analysis based on type
-    if isinstance(output, pd.DataFrame):
-        analysis += f"- **Type**: `pd.DataFrame`\n"
-        analysis += f"- **Shape**: `{output.shape}`\n"
-        analysis += f"- **Columns**: `{list(output.columns)}`\n"
-        analysis += f"- **Basic Stats**:\n\n{output.describe().to_markdown()}\n"
-    elif isinstance(output, pd.Series):
-        analysis += f"- **Type**: `pd.Series`\n"
-        analysis += f"- **Length**: `{len(output)}`\n"
-        analysis += f"- **Mean**: `{output.mean():.4f}`\n"
-    elif isinstance(output, np.ndarray):
-        analysis += f"- **Type**: `np.ndarray`\n"
-        analysis += f"- **Shape**: `{output.shape}`\n"
-        analysis += f"- **Dtype**: `{output.dtype}`\n"
-        analysis += f"- **Mean**: `{np.nanmean(output):.4f}`\n"
-    elif isinstance(output, (dict, list)):
-        analysis += f"- **Type**: `{type(output).__name__}`\n"
-        analysis += f"- **Content**: `{output}`\n"
-    elif isinstance(output, (int, float)):
-        analysis += f"- **Type**: `Scalar`\n"
-        analysis += f"- **Value**: `{output:.4f}`\n"
-    else:
-        analysis += f"- **Type**: `{type(output).__name__}`\n"
-        analysis += f"- **Value**: `{output}`\n"
-        status = "[INFO]"
-
-    # Feedback Logic (Example: Validation criteria)
-    feedback = ""
-    if chapter == 1:
-        if isinstance(output, (int, float)) and output > 0:
-            feedback = "Great! The square of the number is calculated correctly."
-        else:
-            status = "[WARNING]"
-            feedback = "Double-check the implementation. Is it returning a positive number?"
-
-    # Assemble Markdown
-    markdown_output = f"{header}\n**Status**: {status}\n\n{analysis}\n\n**Feedback**: {feedback}\n\n---\n"
+    spec = io_info.get(module_name, {"input": "Unknown", "output": "Unknown"})
+    report.append(f"\n### ⚙️ 仕様確認")
+    report.append(f"- **対象インプット**: `{spec['input']}`")
+    report.append(f"- **期待されるアウトプット**: `{spec['output']}`")
     
-    # Display in console/notebook
-    print(markdown_output)
+    status = "PASSED"
+    analysis = []
     
-    # Copy to clipboard
     try:
-        pyperclip.copy(markdown_output)
-        print("✅ Result copied to clipboard in Markdown format!")
+        # 型判定と基本スキャン
+        if isinstance(user_output, pd.DataFrame):
+            analysis.append("- **実際のアウトプット型**: `pd.DataFrame`")
+            analysis.append(f"- **形状 (Rows, Cols)**: `{user_output.shape}`")
+            nan_count = user_output.isnull().sum().sum()
+            analysis.append(f"- **残存欠損値数**: `{nan_count}`")
+            if not user_output.empty:
+                analysis.append("\n#### 📊 統計概要\n")
+                analysis.append(user_output.describe().to_markdown())
+            
+        elif isinstance(user_output, np.ndarray):
+            analysis.append("- **実際のアウトプット型**: `np.ndarray`")
+            analysis.append(f"- **形状**: `{user_output.shape}`")
+            analysis.append(f"- **平均値**: `{np.nanmean(user_output):.4f}`")
+            
+        elif isinstance(user_output, dict):
+            analysis.append("- **実際のアウトプット型**: `dict`")
+            analysis.append(f"- **取得キー**: `{list(user_output.keys())}`")
+            
+        elif isinstance(user_output, gpd.GeoDataFrame):
+            analysis.append("- **実際のアウトプット型**: `gpd.GeoDataFrame`")
+            analysis.append(f"- **CRS**: `{user_output.crs}`")
+            analysis.append(f"- **レコード数**: `{len(user_output)}`")
+            
+        elif isinstance(user_output, (list, tuple)):
+            analysis.append("- **実際のアウトプット型**: `list/tuple`")
+            analysis.append(f"- **要素数**: `{len(user_output)}`")
+            analysis.append(f"- **取得値**: `{user_output}`")
+        else:
+            status = "WARNING"
+            analysis.append(f"- **不明な型**: `{type(user_output)}`")
+
+        # モジュール固有のチェック
+        if module_name == "numpy":
+            if not isinstance(user_output, (list, tuple, np.ndarray)) or len(user_output) != 2:
+                status = "WARNING"
+                analysis.append("⚠️ **判定**: 要素数2の数値ペアが返されていません。")
+        elif module_name == "pandas":
+            if isinstance(user_output, pd.DataFrame):
+                if not any(c in user_output.columns for c in ['Mg#', 'Mg_number']):
+                    status = "WARNING"
+                    analysis.append("⚠️ **判定**: `Mg#` カラムが見つかりません。")
+        elif module_name == "scipy":
+            if not isinstance(user_output, dict) or 'params' not in user_output:
+                status = "WARNING"
+                analysis.append("⚠️ **判定**: `params` キーが欠落しています。")
+
     except Exception as e:
-        print(f"❌ Failed to copy to clipboard: {e}")
+        status = "ERROR"
+        analysis.append(f"❌ **システムエラー**: {str(e)}")
+
+    report.append(f"- **最終ステータス**: `{status}`")
+    report.append("\n### 🔍 実行詳細分析")
+    report.extend(analysis)
+    
+    final_text = "\n".join(report)
+    print(final_text)
+    
+    try:
+        pyperclip.copy(final_text)
+        print("\n" + "✨" * 20)
+        print("✅ 検証ログをクリップボードにコピーしました！")
+        print("学習記録ノート等にペーストして活用してください。")
+        print("✨" * 20)
+    except Exception as cp_e:
+        print(f"\n❌ クリップボード連携に失敗しました: {cp_e}")
 
     return status

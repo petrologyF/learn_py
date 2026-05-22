@@ -3,111 +3,83 @@ import pandas as pd
 import os
 import rasterio
 from rasterio.transform import from_origin
-import json
 
-# Set seed for reproducibility
-np.random.seed(42)
-
-def generate_rock_composition(output_path):
-    """
-    Generates dummy rock composition data (wt%).
-    Includes SiO2, TiO2, Al2O3, FeO, MgO, CaO, Na2O, K2O.
-    Total should be around 100%.
-    """
-    n_samples = 100
-    # Base composition for a typical basalt
-    base = np.array([50.0, 1.5, 15.0, 10.0, 8.0, 10.0, 2.5, 0.5])
-    noise = np.random.normal(0, 0.1, (n_samples, len(base)))
-    data = base + noise * base
+def generate_all_data():
+    np.random.seed(42)
+    base_data_dir = "data"
     
-    # Normalize to around 100%
-    totals = data.sum(axis=1)
-    data = (data.T / totals * (99.5 + np.random.normal(0, 0.2, n_samples))).T
+    # 1. numpy_data/: Structural Geology (Strike, Dip)
+    # 200x3 ndarray: Strike (0-360), Dip (0-90), Dip Direction
+    numpy_dir = os.path.join(base_data_dir, "numpy_data")
+    os.makedirs(numpy_dir, exist_ok=True)
     
-    columns = ['SiO2', 'TiO2', 'Al2O3', 'FeO', 'MgO', 'CaO', 'Na2O', 'K2O']
-    df = pd.DataFrame(data, columns=columns)
-    df.to_csv(output_path, index=False)
-    print(f"Generated: {output_path}")
-
-def generate_structural_data(output_path):
-    """
-    Generates strike and dip data with some outliers.
-    """
-    n_samples = 50
-    # Main trend: strike around 45, dip around 30
-    strike = np.random.normal(45, 10, n_samples) % 360
-    dip = np.random.normal(30, 5, n_samples)
-    dip = np.clip(dip, 0, 90)
+    strikes = np.random.uniform(0, 360, 200)
+    dips = np.random.uniform(0, 90, 200)
+    dip_directions = (strikes + 90) % 360
     
-    # Add outliers
-    strike[0:5] = np.random.uniform(0, 360, 5)
-    dip[0:5] = np.random.uniform(0, 90, 5)
+    structural_data = np.stack([strikes, dips, dip_directions], axis=1)
     
-    df = pd.DataFrame({'strike': strike, 'dip': dip})
-    df.to_csv(output_path, index=False)
-    print(f"Generated: {output_path}")
-
-def generate_climate_data(output_path):
-    """
-    Generates 10 years of temperature and precipitation data.
-    """
-    dates = pd.date_range(start='2010-01-01', end='2019-12-31', freq='D')
-    n_days = len(dates)
+    # Introduce errors
+    structural_data[10, 1] = -5.0
+    structural_data[25, 0] = 400.0
+    structural_data[50, 2] = np.nan
     
-    # Temperature: seasonal cycle + trend + noise
-    t = np.linspace(0, 10 * 2 * np.pi, n_days)
-    temp = 15 + 10 * np.sin(t) + 0.0005 * np.arange(n_days) + np.random.normal(0, 2, n_days)
+    np.save(os.path.join(numpy_dir, "structural_orientations.npy"), structural_data)
     
-    # Precipitation: random events
-    precip = np.random.exponential(2, n_days)
-    precip[np.random.random(n_days) > 0.2] = 0 # 80% dry days
+    # 2. pandas_data/: Petrology Major Elements
+    pandas_dir = os.path.join(base_data_dir, "pandas_data")
+    os.makedirs(pandas_dir, exist_ok=True)
     
-    df = pd.DataFrame({'date': dates, 'temperature': temp, 'precipitation': precip})
+    elements = ['SiO2', 'TiO2', 'Al2O3', 'FeO', 'MgO', 'CaO', 'Na2O', 'K2O']
+    n_samples = 150
+    comp_data = np.random.dirichlet(np.ones(len(elements)), size=n_samples) * 100
+    df_petro = pd.DataFrame(comp_data, columns=elements)
     
-    # Add missing values
-    mask = np.random.choice([True, False], size=df.shape[0], p=[0.05, 0.95])
-    df.loc[mask, 'temperature'] = np.nan
+    # Add 3% NaNs
+    mask = np.random.random(df_petro.shape) < 0.03
+    df_petro[mask] = np.nan
     
-    df.to_csv(output_path, index=False)
-    print(f"Generated: {output_path}")
-
-def generate_dem(output_path):
-    """
-    Generates a synthetic DEM using Gaussian peaks and valleys.
-    """
-    width, height = 512, 512
-    x = np.linspace(-5, 5, width)
-    y = np.linspace(-5, 5, height)
+    df_petro.to_csv(os.path.join(pandas_dir, "major_elements.csv"), index=False)
+    
+    # 3. scipy_data/: Time Series Environmental Data
+    scipy_dir = os.path.join(base_data_dir, "scipy_data")
+    os.makedirs(scipy_dir, exist_ok=True)
+    
+    t = np.linspace(0, 100, 1000)
+    trend = 0.5 * t
+    seasonality = 10 * np.sin(2 * np.pi * t / 10)
+    noise = np.random.normal(0, 2, 1000)
+    signal = trend + seasonality + noise
+    
+    df_env = pd.DataFrame({'time': t, 'signal': signal})
+    df_env.to_csv(os.path.join(scipy_dir, "environmental_series.csv"), index=False)
+    
+    # 4. geospatial_data/: DEM GeoTIFF
+    geospatial_dir = os.path.join(base_data_dir, "geospatial_data")
+    os.makedirs(geospatial_dir, exist_ok=True)
+    
+    width, height = 100, 100
+    x = np.linspace(-3, 3, width)
+    y = np.linspace(-3, 3, height)
     X, Y = np.meshgrid(x, y)
+    Z = 1000 * np.exp(-(X**2 + Y**2) / 2)
+    Z = Z.astype('float32')
     
-    # Combination of Gaussians
-    Z = 500 + 200 * np.exp(-(X**2 + Y**2)/2) \
-        - 150 * np.exp(-((X-2)**2 + (Y-3)**2)/1.5) \
-        + 100 * np.exp(-((X+3)**2 + (Y+2)**2)/2)
+    transform = from_origin(135.0, 35.0, 0.001, 0.001)
     
-    # Add some noise
-    Z += np.random.normal(0, 5, Z.shape)
-    
-    # Transform: 1 pixel = 10 meters, centered at 135.0E, 35.0N
-    transform = from_origin(135.0, 35.0, 0.0001, 0.0001)
-    
-    new_dataset = rasterio.open(
-        output_path, 'w', driver='GTiff',
-        height=height, width=width,
-        count=1, dtype=Z.dtype,
-        crs='+proj=latlong',
+    with rasterio.open(
+        os.path.join(geospatial_dir, "dem.tif"),
+        'w',
+        driver='GTiff',
+        height=height,
+        width=width,
+        count=1,
+        dtype=Z.dtype,
+        crs='EPSG:4326',
         transform=transform,
-    )
-    new_dataset.write(Z, 1)
-    new_dataset.close()
-    print(f"Generated: {output_path}")
+    ) as dst:
+        dst.write(Z, 1)
 
 if __name__ == "__main__":
-    data_dir = "data"
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-        
-    generate_rock_composition(os.path.join(data_dir, "rock_composition.csv"))
-    generate_structural_data(os.path.join(data_dir, "structural_faults.csv"))
-    generate_climate_data(os.path.join(data_dir, "climate_timeseries.csv"))
-    generate_dem(os.path.join(data_dir, "synthetic_dem.tif"))
+    generate_all_data()
+    print("All data generated successfully.")
